@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rock Paper Scissors - Fun Edition</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #74ebd5 0%, #ACB6E5 100%);
+    margin: 0;
+    padding: 40px 20px;
+    text-align: center;
+    color: #222;
+  }
+  h1 {
+    font-size: 3em;
+    margin-bottom: 10px;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+  }
+  .scoreboard {
+    margin-bottom: 30px;
+    font-size: 1.2em;
+  }
+  .scoreboard span {
+    margin: 0 15px;
+    font-weight: bold;
+  }
+  .buttons {
+    margin-bottom: 20px;
+  }
+  button.choice {
+    font-size: 2em;
+    margin: 0 15px;
+    padding: 20px 25px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+    background-color: white;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    user-select: none;
+  }
+  button.choice:hover {
+    transform: scale(1.1);
+    box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+  }
+  button.choice:active {
+    transform: scale(0.95);
+  }
+  button.choice.animate {
+    animation: pulse 0.4s ease;
+  }
+  @keyframes pulse {
+    0% { transform: scale(1); box-shadow: 0 4px 6px rgba(0,0,0,0.1);}
+    50% { transform: scale(1.2); box-shadow: 0 12px 20px rgba(0,0,0,0.3);}
+    100% { transform: scale(1); box-shadow: 0 4px 6px rgba(0,0,0,0.1);}
+  }
+  .results {
+    font-size: 1.5em;
+    min-height: 90px;
+  }
+  .result.win {
+    color: #2ecc71;
+    font-weight: bold;
+  }
+  .result.lose {
+    color: #e74c3c;
+    font-weight: bold;
+  }
+  .result.tie {
+    color: #f39c12;
+    font-weight: bold;
+  }
+  .choices-display {
+    margin: 15px 0;
+    font-size: 1.3em;
+  }
+  .reset-btn {
+    margin-top: 30px;
+    background-color: #e67e22;
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    font-size: 1em;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  .reset-btn:hover {
+    background-color: #d35400;
+  }
+  table {
+    margin: 30px auto;
+    width: 90%;
+    max-width: 700px;
+    background: white;
+    border-collapse: collapse;
+  }
+  table, th, td {
+    border: 1px solid #ccc;
+  }
+  th {
+    background-color: #eee;
+    padding: 8px;
+  }
+  td {
+    padding: 8px;
+  }
+</style>
+</head>
+<body>
+  <h1>✊ Rock Paper Scissors ✋</h1>
+
+  <div class="scoreboard">
+    Wins: <span id="wins">0</span> |
+    Losses: <span id="losses">0</span> |
+    Ties: <span id="ties">0</span>
+  </div>
+
+  <div class="buttons" id="buttons"></div>
+
+  <div class="choices-display">
+    Your choice: <span id="playerChoice">-</span> |
+    Computer's choice: <span id="computerChoice">-</span>
+  </div>
+
+  <div class="results" id="resultText">Make your move!</div>
+
+  <button class="reset-btn" id="resetBtn">Reset Score</button>
+
+  <table id="historyTable">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Player</th>
+        <th>Computer</th>
+        <th>Result</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const choices = [
+      {name: "rock", emoji: "✊"},
+      {name: "paper", emoji: "✋"},
+      {name: "scissors", emoji: "✌️"},
+    ];
+
+    let wins = 0, losses = 0, ties = 0;
+
+    const buttonsDiv = document.getElementById("buttons");
+    const playerChoiceEl = document.getElementById("playerChoice");
+    const computerChoiceEl = document.getElementById("computerChoice");
+    const resultTextEl = document.getElementById("resultText");
+    const winsEl = document.getElementById("wins");
+    const lossesEl = document.getElementById("losses");
+    const tiesEl = document.getElementById("ties");
+    const resetBtn = document.getElementById("resetBtn");
+
+    function updateScoreboard() {
+      winsEl.textContent = wins;
+      lossesEl.textContent = losses;
+      tiesEl.textContent = ties;
+    }
+
+    function animateButton(btn) {
+      btn.classList.add("animate");
+      setTimeout(() => btn.classList.remove("animate"), 400);
+    }
+
+    function addToHistory(date, player, computer, result) {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${date}</td>
+        <td>${player}</td>
+        <td>${computer}</td>
+        <td>${result}</td>
+      `;
+      document.querySelector("#historyTable tbody").appendChild(row);
+    }
+
+    function play(choice) {
+      playerChoiceEl.textContent = `${choice.emoji} ${choice.name}`;
+      resultTextEl.textContent = "Waiting for result...";
+      computerChoiceEl.textContent = "-";
+      animateButton(document.getElementById(`btn-${choice.name}`));
+
+      fetch("http://localhost:5000/play", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ player: choice.name }),
+      })
+      .then(res => res.json())
+      .then(data => {
+        const now = new Date().toLocaleString();
+        computerChoiceEl.textContent = `${choices.find(c => c.name === data.computer).emoji} ${data.computer}`;
+        resultTextEl.textContent = data.result;
+
+        if(data.result.includes("win")) {
+          resultTextEl.className = "result win";
+          wins++;
+        } else if(data.result.includes("tie")) {
+          resultTextEl.className = "result tie";
+          ties++;
+        } else {
+          resultTextEl.className = "result lose";
+          losses++;
+        }
+
+        updateScoreboard();
+        playSound(data.result);
+        addToHistory(now, choice.name, data.computer, data.result);
+      })
+      .catch(() => {
+        alert("Can't reach backend server.");
+        resultTextEl.textContent = "Error: backend not reachable.";
+        resultTextEl.className = "result lose";
+      });
+    }
+
+    choices.forEach(choice => {
+      const btn = document.createElement("button");
+      btn.id = `btn-${choice.name}`;
+      btn.className = "choice";
+      btn.title = choice.name.charAt(0).toUpperCase() + choice.name.slice(1);
+      btn.textContent = choice.emoji;
+      btn.onclick = () => play(choice);
+      buttonsDiv.appendChild(btn);
+    });
+
+    resetBtn.onclick = () => {
+      wins = 0; losses = 0; ties = 0;
+      updateScoreboard();
+      playerChoiceEl.textContent = "-";
+      computerChoiceEl.textContent = "-";
+      resultTextEl.textContent = "Make your move!";
+      resultTextEl.className = "";
+      document.querySelector("#historyTable tbody").innerHTML = "";
+    };
+
+    updateScoreboard();
+
+    function playSound(result) {
+      let freq;
+      if(result.includes("win")) freq = 523;
+      else if(result.includes("tie")) freq = 349;
+      else freq = 196;
+
+      if (!window.AudioContext) return;
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.frequency.value = freq;
+      osc.type = "triangle";
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      osc.stop(ctx.currentTime + 0.3);
+    }
+  </script>
+</body>
+</html>
