@@ -1,1 +1,3 @@
 # rock_paper_scissor
+Play game with computer 
+with stored data your game...
